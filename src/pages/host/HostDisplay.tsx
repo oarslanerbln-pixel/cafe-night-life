@@ -6,6 +6,7 @@ import { ParticleBackground } from '../../components/ParticleBackground';
 import { NeonIcon } from '../../components/NeonIcon';
 import { KineticSpark } from '../../components/KineticSpark';
 import { QRCodeSVG } from 'qrcode.react';
+import { normalizeAnswer, startsWithLetter } from '../../lib/turkish';
 
 type Room = {
     id: string;
@@ -122,7 +123,6 @@ export function HostDisplay() {
         await new Promise(resolve => setTimeout(resolve, 2500));
 
         const letterToQuery = room.active_letter || currentLetter;
-        const normalizedLetter = letterToQuery.toLowerCase();
 
         const { data: roundAnswersArray } = await supabase
             .from('answers')
@@ -145,13 +145,10 @@ export function HostDisplay() {
             const ansData = answer.data as Record<string, string>;
             (room.categories || []).forEach(cat => {
                 const valRaw = ansData[cat] || '';
-                const val = valRaw.trim().toLowerCase();
-                if (val) {
-                    // Pre-filter: Must start with the correct letter
-                    // Turkish character handling could be added here if needed (e.g., i/İ)
-                    if (val.startsWith(normalizedLetter)) {
-                        categoryCounts[cat][val] = (categoryCounts[cat][val] || 0) + 1;
-                    }
+                const val = normalizeAnswer(valRaw);
+                // Sadece doğru harfle başlayan cevaplar benzersizlik sayımına girer (tr-TR duyarlı)
+                if (val && startsWithLetter(valRaw, letterToQuery)) {
+                    categoryCounts[cat][val] = (categoryCounts[cat][val] || 0) + 1;
                 }
             });
         });
@@ -179,14 +176,14 @@ export function HostDisplay() {
 
             (room.categories || []).forEach(cat => {
                 const valRaw = ansData[cat] || '';
-                const val = valRaw.trim().toLowerCase();
+                const val = normalizeAnswer(valRaw);
                 let isUnique = false;
                 let pts = 0;
                 let isValid = false;
 
                 if (val) {
-                    // Check first letter
-                    if (val.startsWith(normalizedLetter)) {
+                    // Check first letter (tr-TR duyarlı)
+                    if (startsWithLetter(valRaw, letterToQuery)) {
                         isValid = true;
                         if (categoryCounts[cat][val] === 1) {
                             isUnique = true;
@@ -346,18 +343,17 @@ export function HostDisplay() {
 
     // Timer simulation & DB sync for clients
     useEffect(() => {
-        if (gameState === 'playing' && timeLeft > 0) {
-            const timer = setTimeout(() => {
-                const newTime = timeLeft - 1;
-                setTimeLeft(newTime);
-                if (newTime % 5 === 0 && roomId) {
-                    supabase.from('rooms').update({ time_left: newTime }).eq('id', roomId).then();
-                }
-            }, 1000);
-            return () => clearTimeout(timer);
-        } else if (gameState === 'playing' && timeLeft === 0) {
-            endRound();
-        }
+        if (gameState !== 'playing' || timeLeft <= 0) return;
+        const timer = setTimeout(() => {
+            const newTime = timeLeft - 1;
+            setTimeLeft(newTime);
+            if (newTime % 5 === 0 && roomId) {
+                supabase.from('rooms').update({ time_left: newTime }).eq('id', roomId).then();
+            }
+            // Süre bitince turu kapat (efekt gövdesinde değil, zamanlayıcı callback'inde)
+            if (newTime === 0) endRound();
+        }, 1000);
+        return () => clearTimeout(timer);
     }, [gameState, timeLeft]);
 
     return (
@@ -597,7 +593,7 @@ export function HostDisplay() {
                                                                             ) : (
                                                                                 <>
                                                                                     <div className="w-1.5 h-1.5 rounded-full bg-red-500" />
-                                                                                    {ans?.value && ans.value.toLowerCase().startsWith((room?.active_letter || currentLetter).toLowerCase()) 
+                                                                                    {ans?.value && startsWithLetter(ans.value, room?.active_letter || currentLetter)
                                                                                         ? 'HOST REDDETTİ' : 'GEÇERSİZ HARF'}
                                                                                 </>
                                                                             )}

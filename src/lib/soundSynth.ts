@@ -7,7 +7,9 @@ export function playCinematicWhoosh() {
     if (typeof window === 'undefined') return;
     
     try {
-        const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+        const Ctor = window.AudioContext || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+        if (!Ctor) return;
+        const audioCtx = new Ctor();
         const bufferSize = audioCtx.sampleRate * 2;
         const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
         const data = buffer.getChannelData(0);
