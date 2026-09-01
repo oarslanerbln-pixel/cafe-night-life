@@ -1,8 +1,9 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../../lib/supabase';
 import { NeonIcon } from '../../components/NeonIcon';
 import { KineticSpark } from '../../components/KineticSpark';
+import { startsWithLetter } from '../../lib/turkish';
 
 type RoomStatus = 'lobby' | 'playing' | 'review' | 'finished' | 'closed';
 
@@ -29,6 +30,40 @@ export function PlayerGame() {
     const roomId = localStorage.getItem('cafe_game_roomId');
     const playerId = localStorage.getItem('cafe_game_playerId');
     const hasSubmitted = useRef(false);
+    // Realtime callback'lerinin bayat closure yerine güncel değeri görmesi için ref'ler.
+    const roomStatusRef = useRef<RoomStatus>('lobby');
+    const totalScoreRef = useRef(0);
+    const answersRef = useRef<Record<string, string>>({});
+    const activeLetterRef = useRef('?');
+    useEffect(() => { roomStatusRef.current = roomStatus; }, [roomStatus]);
+    useEffect(() => { totalScoreRef.current = totalScore; }, [totalScore]);
+    useEffect(() => { answersRef.current = answers; }, [answers]);
+    useEffect(() => { activeLetterRef.current = activeLetter; }, [activeLetter]);
+
+    // Sadece ref ve sabit değerleri okur; bu sayede realtime callback'inden güvenle çağrılabilir.
+    const submitAnswers = useCallback(async (isEarly: boolean = false) => {
+        if (!roomId || !playerId || (hasSubmitted.current && !isEarly)) return;
+        setSubmitStatus('submitting');
+        setIsLocked(true); // Lock inputs if manually early submitted
+        hasSubmitted.current = true;
+
+        const finalData = { ...answersRef.current, _earlySubmit: isEarly ? 'true' : 'false' };
+
+        const { error } = await supabase.from('answers').insert([
+            {
+                room_id: roomId,
+                player_id: playerId,
+                round_letter: activeLetterRef.current,
+                data: finalData,
+                is_submitted: true,
+            }
+        ]);
+
+        if (error) {
+            console.error('Answer submit error:', error);
+        }
+        setSubmitStatus('submitted');
+    }, [roomId, playerId]);
 
     useEffect(() => {
         if (!roomId) return;
@@ -59,12 +94,17 @@ export function PlayerGame() {
                 (payload) => {
                     const room = payload.new;
 
-                    // Reset on new round starting
-                    if (room.status === 'playing' && roomStatus !== 'playing') {
+                    // Yeni tur başlıyor: kilidi aç ve cevapları sıfırla
+                    if (room.status === 'playing' && roomStatusRef.current !== 'playing') {
                         setIsLocked(false);
                         hasSubmitted.current = false;
                         setSubmitStatus('idle');
+                        setRoundPoints(null);
+                        const fresh: Record<string, string> = {};
+                        (room.categories || []).forEach((cat: string) => { fresh[cat] = ''; });
+                        setAnswers(fresh);
                     }
+                    roomStatusRef.current = room.status;
 
                     setRoomStatus(room.status);
                     if (room.active_letter) setActiveLetter(room.active_letter);
@@ -73,19 +113,24 @@ export function PlayerGame() {
                     if (room.timer_setting) setTimerSetting(room.timer_setting);
                     if (room.current_round) setCurrentRound(room.current_round);
 
+                    // Host turu kapattı: kilitle ve henüz göndermemişse cevapları otomatik gönder
                     if (room.status === 'review' || room.status === 'finished') {
                         setIsLocked(true);
+                        if (!hasSubmitted.current) submitAnswers(false);
                     }
                 }
             )
             .subscribe();
 
         // Separate subscription for current player's score
-        let playerChannel: any;
+        let playerChannel: ReturnType<typeof supabase.channel> | null = null;
         if (playerId) {
             const fetchPlayer = async () => {
                 const { data } = await supabase.from('players').select('total_score').eq('id', playerId).single();
-                if (data) setTotalScore(data.total_score);
+                if (data) {
+                    totalScoreRef.current = data.total_score;
+                    setTotalScore(data.total_score);
+                }
             };
             fetchPlayer();
 
@@ -94,7 +139,8 @@ export function PlayerGame() {
                 .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'players', filter: `id=eq.${playerId}` },
                     (payload) => {
                         const newScore = payload.new.total_score;
-                        setRoundPoints(newScore - totalScore);
+                        setRoundPoints(newScore - totalScoreRef.current);
+                        totalScoreRef.current = newScore;
                         setTotalScore(newScore);
                     }
                 )
@@ -105,38 +151,7 @@ export function PlayerGame() {
             supabase.removeChannel(channel);
             if (playerChannel) supabase.removeChannel(playerChannel);
         };
-    }, [roomId, roomStatus]);
-
-    useEffect(() => {
-        if (isLocked && !hasSubmitted.current) {
-            hasSubmitted.current = true;
-            submitAnswers(false);
-        }
-    }, [isLocked]);
-
-    const submitAnswers = async (isEarly: boolean = false) => {
-        if (!roomId || !playerId || hasSubmitted.current && !isEarly) return;
-        setSubmitStatus('submitting');
-        setIsLocked(true); // Lock inputs if manually early submitted
-        hasSubmitted.current = true;
-
-        const finalData = { ...answers, _earlySubmit: isEarly ? 'true' : 'false' };
-
-        const { error } = await supabase.from('answers').insert([
-            {
-                room_id: roomId,
-                player_id: playerId,
-                round_letter: activeLetter,
-                data: finalData,
-                is_submitted: true,
-            }
-        ]);
-
-        if (error) {
-            console.error('Answer submit error:', error);
-        }
-        setSubmitStatus('submitted');
-    };
+    }, [roomId, playerId, submitAnswers]);
 
     const handleInputChange = (category: string, value: string) => {
         if (isLocked) return;
@@ -264,7 +279,7 @@ export function PlayerGame() {
                                         </div>
                                         {(() => {
                                             const val = answers[category] || '';
-                                            const isWrongLetter = val.trim() !== '' && !val.trim().toLowerCase().startsWith(activeLetter.toLowerCase());
+                                            const isWrongLetter = val.trim() !== '' && !startsWithLetter(val, activeLetter);
                                             return (
                                                 <>
                                                     <input
