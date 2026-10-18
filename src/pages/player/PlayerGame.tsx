@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import type { RealtimeChannel } from '@supabase/supabase-js';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../../lib/supabase';
 import { NeonIcon } from '../../components/NeonIcon';
@@ -12,7 +13,7 @@ export function PlayerGame() {
     const [activeLetter, setActiveLetter] = useState<string>('?');
     const [answers, setAnswers] = useState<Record<string, string>>({});
     const [isLocked, setIsLocked] = useState(false);
-    const [submitStatus, setSubmitStatus] = useState<'idle' | 'submitting' | 'submitted'>('idle');
+    const [submitStatus, setSubmitStatus] = useState<'idle' | 'submitting' | 'submitted' | 'error'>('idle');
     const [timeLeft, setTimeLeft] = useState<number | null>(null);
     const [timerSetting, setTimerSetting] = useState<number>(60);
     const [currentRound, setCurrentRound] = useState(0);
@@ -29,98 +30,19 @@ export function PlayerGame() {
     const roomId = localStorage.getItem('cafe_game_roomId');
     const playerId = localStorage.getItem('cafe_game_playerId');
     const hasSubmitted = useRef(false);
+    // Realtime callbacks outlive renders, so they read the latest values through refs
+    const roomStatusRef = useRef<RoomStatus>('lobby');
+    const totalScoreRef = useRef(0);
 
-    useEffect(() => {
-        if (!roomId) return;
-
-        const fetchRoom = async () => {
-            const { data } = await supabase.from('rooms').select('*').eq('id', roomId).single();
-            if (data) {
-                setRoomStatus(data.status);
-                setCategories(data.categories || []);
-                setTimerSetting(data.timer_setting || 60);
-                setCurrentRound(data.current_round || 0);
-                if (data.active_letter) setActiveLetter(data.active_letter);
-                if (data.time_left !== undefined) setTimeLeft(data.time_left);
-
-                const initialAnswers: Record<string, string> = {};
-                (data.categories || []).forEach((cat: string) => {
-                    initialAnswers[cat] = '';
-                });
-                setAnswers(initialAnswers);
-            }
-        };
-
-        fetchRoom();
-
-        const channel = supabase
-            .channel(`player-room-${roomId}`)
-            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'rooms', filter: `id=eq.${roomId}` },
-                (payload) => {
-                    const room = payload.new;
-
-                    // Reset on new round starting
-                    if (room.status === 'playing' && roomStatus !== 'playing') {
-                        setIsLocked(false);
-                        hasSubmitted.current = false;
-                        setSubmitStatus('idle');
-                    }
-
-                    setRoomStatus(room.status);
-                    if (room.active_letter) setActiveLetter(room.active_letter);
-                    if (room.categories) setCategories(room.categories);
-                    if (room.time_left !== undefined) setTimeLeft(room.time_left);
-                    if (room.timer_setting) setTimerSetting(room.timer_setting);
-                    if (room.current_round) setCurrentRound(room.current_round);
-
-                    if (room.status === 'review' || room.status === 'finished') {
-                        setIsLocked(true);
-                    }
-                }
-            )
-            .subscribe();
-
-        // Separate subscription for current player's score
-        let playerChannel: any;
-        if (playerId) {
-            const fetchPlayer = async () => {
-                const { data } = await supabase.from('players').select('total_score').eq('id', playerId).single();
-                if (data) setTotalScore(data.total_score);
-            };
-            fetchPlayer();
-
-            playerChannel = supabase
-                .channel(`player-self-${playerId}`)
-                .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'players', filter: `id=eq.${playerId}` },
-                    (payload) => {
-                        const newScore = payload.new.total_score;
-                        setRoundPoints(newScore - totalScore);
-                        setTotalScore(newScore);
-                    }
-                )
-                .subscribe();
-        }
-
-        return () => {
-            supabase.removeChannel(channel);
-            if (playerChannel) supabase.removeChannel(playerChannel);
-        };
-    }, [roomId, roomStatus]);
-
-    useEffect(() => {
-        if (isLocked && !hasSubmitted.current) {
-            hasSubmitted.current = true;
-            submitAnswers(false);
-        }
-    }, [isLocked]);
-
-    const submitAnswers = async (isEarly: boolean = false) => {
-        if (!roomId || !playerId || hasSubmitted.current && !isEarly) return;
+    const submitAnswers = useCallback(async (isEarly: boolean = false) => {
+        if (!roomId || !playerId || hasSubmitted.current) return;
+        hasSubmitted.current = true;
         setSubmitStatus('submitting');
         setIsLocked(true); // Lock inputs if manually early submitted
-        hasSubmitted.current = true;
 
-        const finalData = { ...answers, _earlySubmit: isEarly ? 'true' : 'false' };
+        // The answers table is keyed by letter only; _round lets the host tell rounds apart
+        // when the same letter is drawn again.
+        const finalData = { ...answers, _earlySubmit: isEarly ? 'true' : 'false', _round: String(currentRound) };
 
         const { error } = await supabase.from('answers').insert([
             {
@@ -135,8 +57,99 @@ export function PlayerGame() {
         if (error) {
             console.error('Answer submit error:', error);
         }
-        setSubmitStatus('submitted');
-    };
+        setSubmitStatus(error ? 'error' : 'submitted');
+    }, [roomId, playerId, answers, activeLetter, currentRound]);
+
+    // The realtime callback below outlives renders; this keeps it pointed at the submit that sees the typed answers
+    const submitRef = useRef(submitAnswers);
+    useEffect(() => {
+        submitRef.current = submitAnswers;
+    }, [submitAnswers]);
+
+    useEffect(() => {
+        if (!roomId) return;
+
+        const emptyAnswers = (cats: string[]) => Object.fromEntries(cats.map(cat => [cat, '']));
+
+        const fetchRoom = async () => {
+            const { data } = await supabase.from('rooms').select('*').eq('id', roomId).single();
+            if (data) {
+                roomStatusRef.current = data.status;
+                setRoomStatus(data.status);
+                setCategories(data.categories || []);
+                setTimerSetting(data.timer_setting || 60);
+                setCurrentRound(data.current_round || 0);
+                if (data.active_letter) setActiveLetter(data.active_letter);
+                if (data.time_left !== undefined) setTimeLeft(data.time_left);
+                setAnswers(emptyAnswers(data.categories || []));
+            }
+        };
+
+        fetchRoom();
+
+        const channel = supabase
+            .channel(`player-room-${roomId}`)
+            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'rooms', filter: `id=eq.${roomId}` },
+                (payload) => {
+                    const room = payload.new;
+
+                    // Reset on new round starting
+                    if (room.status === 'playing' && roomStatusRef.current !== 'playing') {
+                        setIsLocked(false);
+                        hasSubmitted.current = false;
+                        setSubmitStatus('idle');
+                        setRoundPoints(null);
+                        setAnswers(emptyAnswers(room.categories || []));
+                    }
+
+                    roomStatusRef.current = room.status;
+                    setRoomStatus(room.status);
+                    if (room.active_letter) setActiveLetter(room.active_letter);
+                    if (room.categories) setCategories(room.categories);
+                    if (room.time_left !== undefined) setTimeLeft(room.time_left);
+                    if (room.timer_setting) setTimerSetting(room.timer_setting);
+                    if (room.current_round) setCurrentRound(room.current_round);
+
+                    if (room.status === 'review' || room.status === 'finished') {
+                        setIsLocked(true);
+                        // Round ended (timer ran out / host closed it) before an early send: submit what is typed.
+                        // No-op when the player already sent early.
+                        submitRef.current(false);
+                    }
+                }
+            )
+            .subscribe();
+
+        // Separate subscription for current player's score
+        let playerChannel: RealtimeChannel | undefined;
+        if (playerId) {
+            const fetchPlayer = async () => {
+                const { data } = await supabase.from('players').select('total_score').eq('id', playerId).single();
+                if (data) {
+                    totalScoreRef.current = data.total_score;
+                    setTotalScore(data.total_score);
+                }
+            };
+            fetchPlayer();
+
+            playerChannel = supabase
+                .channel(`player-self-${playerId}`)
+                .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'players', filter: `id=eq.${playerId}` },
+                    (payload) => {
+                        const newScore = payload.new.total_score;
+                        setRoundPoints(newScore - totalScoreRef.current);
+                        totalScoreRef.current = newScore;
+                        setTotalScore(newScore);
+                    }
+                )
+                .subscribe();
+        }
+
+        return () => {
+            supabase.removeChannel(channel);
+            if (playerChannel) supabase.removeChannel(playerChannel);
+        };
+    }, [roomId, playerId]);
 
     const handleInputChange = (category: string, value: string) => {
         if (isLocked) return;
@@ -329,6 +342,7 @@ export function PlayerGame() {
                                     <p className="text-gray-400 text-sm font-medium">
                                         {submitStatus === 'submitting' && 'Cevapların şehir merkezine taşınıyor...'}
                                         {submitStatus === 'submitted' && 'Cevapların alındı! ✅ Puanlar TV ekranında.'}
+                                        {submitStatus === 'error' && 'Cevapların gönderilemedi ❌ Bağlantını kontrol et.'}
                                         {submitStatus === 'idle' && (roomStatus === 'finished' ? 'Final tablosu hazır' : 'Sistem puanlamayı yapıyor...')}
                                     </p>
                                     {roundPoints !== null && roundPoints > 0 && (
