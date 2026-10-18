@@ -124,12 +124,19 @@ export function HostDisplay() {
         const letterToQuery = room.active_letter || currentLetter;
         const normalizedLetter = letterToQuery.toLowerCase();
 
-        const { data: roundAnswersArray } = await supabase
+        const { data: fetchedAnswers } = await supabase
             .from('answers')
             .select('player_id, data, created_at')
             .eq('room_id', roomId)
             .eq('round_letter', letterToQuery)
             .order('created_at', { ascending: true });
+
+        // Rows are keyed by letter only, so a letter drawn again (another round or "Yeni Oyun")
+        // would pull in old answers. Players tag each row with its round; untagged rows are legacy.
+        const roundAnswersArray = fetchedAnswers?.filter(a => {
+            const round = (a.data as Record<string, string>)._round;
+            return round === undefined || round === String(room.current_round);
+        });
 
         if (!roundAnswersArray || roundAnswersArray.length === 0) {
             console.log("Cevap bulunamadı. Sorgu harfi:", letterToQuery);
@@ -346,18 +353,19 @@ export function HostDisplay() {
 
     // Timer simulation & DB sync for clients
     useEffect(() => {
-        if (gameState === 'playing' && timeLeft > 0) {
-            const timer = setTimeout(() => {
-                const newTime = timeLeft - 1;
-                setTimeLeft(newTime);
-                if (newTime % 5 === 0 && roomId) {
-                    supabase.from('rooms').update({ time_left: newTime }).eq('id', roomId).then();
-                }
-            }, 1000);
-            return () => clearTimeout(timer);
-        } else if (gameState === 'playing' && timeLeft === 0) {
-            endRound();
-        }
+        if (gameState !== 'playing' || timeLeft <= 0) return;
+
+        const timer = setTimeout(() => {
+            const newTime = timeLeft - 1;
+            setTimeLeft(newTime);
+            // No time_left=0 write: the status change to 'review' ends the round, and an extra
+            // UPDATE still carrying status 'playing' would bounce the host back into 'playing'.
+            if (newTime > 0 && newTime % 5 === 0 && roomId) {
+                supabase.from('rooms').update({ time_left: newTime }).eq('id', roomId).then();
+            }
+            if (newTime === 0) endRound();
+        }, 1000);
+        return () => clearTimeout(timer);
     }, [gameState, timeLeft]);
 
     return (
