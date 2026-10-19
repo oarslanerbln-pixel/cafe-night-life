@@ -1,5 +1,5 @@
 /**
- * ALAZ NEON Cinematic Whoosh Synthesizer
+ * HENGAME Cinematic Whoosh Synthesizer
  * Generates a high-quality "whoosh" sound using white noise and dynamic filtering.
  * No external assets required.
  */

@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../../lib/supabase';
 import { NeonIcon } from '../../components/NeonIcon';
 import { KineticSpark } from '../../components/KineticSpark';
+import { normalizeAnswer } from '../../lib/scoring';
 
 type RoomStatus = 'lobby' | 'playing' | 'review' | 'finished' | 'closed';
 
@@ -26,7 +27,7 @@ export function PlayerGame() {
         return () => clearTimeout(timer);
     }, []);
 
-    const playerName = localStorage.getItem('cafe_game_playerName') || 'Oyuncu';
+    const playerName = localStorage.getItem('cafe_game_playerName') || 'Spieler';
     const roomId = localStorage.getItem('cafe_game_roomId');
     const playerId = localStorage.getItem('cafe_game_playerId');
     const hasSubmitted = useRef(false);
@@ -177,7 +178,7 @@ export function PlayerGame() {
                         className="bg-black fixed inset-0 z-[100] flex items-center justify-center overflow-hidden noise-suppression"
                     >
                         <div className="relative w-full max-w-7xl flex flex-col items-center justify-center">
-                            <KineticSpark delay={0.5} showTagline tagline="Kadim Ateş • Modern Ruh" />
+                            <KineticSpark delay={0.5} showTagline tagline="Uraltes Feuer • Moderner Geist" />
                             <motion.div
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: [0, 0.1, 0.05, 0.15] }}
@@ -205,14 +206,14 @@ export function PlayerGame() {
                             roomStatus === 'finished' ? 'bg-neon-blue/10 text-neon-blue border-neon-blue/30' :
                                 'bg-white/5 text-white/40 border-white/10'
                         }`}>
-                        {roomStatus === 'lobby' && 'BEKLEMEDE'}
-                        {roomStatus === 'playing' && `CANLI - TUR ${currentRound}`}
-                        {roomStatus === 'review' && 'SİSTEM HESAPLIYOR'}
-                        {roomStatus === 'finished' && 'OYUN BİTTİ!'}
+                        {roomStatus === 'lobby' && 'WARTET'}
+                        {roomStatus === 'playing' && `LIVE – RUNDE ${currentRound}`}
+                        {roomStatus === 'review' && 'WIRD AUSGEWERTET'}
+                        {roomStatus === 'finished' && 'SPIEL VORBEI!'}
                     </div>
                     {totalScore > 0 && (
                         <div className="flex items-center gap-1 mt-1">
-                            <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">TOPLAM:</span>
+                            <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">GESAMT:</span>
                             <span className="text-sm font-black text-alaz-orange">{totalScore}</span>
                         </div>
                     )}
@@ -222,7 +223,7 @@ export function PlayerGame() {
             {roomStatus === 'playing' && timeLeft !== null && (
                 <div className="w-full mb-6">
                     <div className="flex justify-between text-xs font-black uppercase tracking-widest mb-2 px-1">
-                        <span className="text-gray-400">Kalan Süre</span>
+                        <span className="text-gray-400">Restzeit</span>
                         <span className={timeLeft <= 10 ? 'text-red-500 animate-pulse' : 'text-alaz-orange'}>{timeLeft}s</span>
                     </div>
                     <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden">
@@ -242,15 +243,14 @@ export function PlayerGame() {
                         <motion.div key="lobby" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, y: -20 }} className="flex-1 flex flex-col items-center justify-center text-center space-y-10">
                             <div className="relative w-full max-w-xs mx-auto opacity-80 scale-75">
                                 <KineticSpark
-                        fontSizeAlaz="text-[6rem] md:text-[5rem]"
-                        fontSizeNeon="text-[5rem] md:text-[4rem]"
+                        fontSize="text-[6rem] md:text-[5rem]"
                         delay={0.1}
                     />
                                 <div className="absolute inset-0 bg-alaz-orange/5 blur-3xl rounded-full -z-10 animate-pulse" />
                             </div>
                             <div className="space-y-4">
-                                <h2 className="text-2xl font-black text-white italic tracking-tighter uppercase text-glow-alaz">ATEŞE HAZIR MISIN?</h2>
-                                <p className="text-gray-400 text-xs max-w-[280px] mx-auto leading-relaxed font-medium">Gözler TV ekranında! Kadim ateş parladığında savaş başlayacak.</p>
+                                <h2 className="text-2xl font-black text-white italic tracking-tighter uppercase text-glow-alaz">BEREIT FÜRS GETÜMMEL?</h2>
+                                <p className="text-gray-400 text-xs max-w-[280px] mx-auto leading-relaxed font-medium">Alle Augen auf den TV! Sobald das Feuer aufleuchtet, geht es los.</p>
                             </div>
                         </motion.div>
                     )}
@@ -263,8 +263,8 @@ export function PlayerGame() {
                                     <span className="text-5xl font-black text-white text-glow-ultra-alaz">{activeLetter}</span>
                                 </div>
                                 <div className="text-left flex-1">
-                                    <h2 className="text-xl font-black text-white italic tracking-tight uppercase">Sıradaki Harf</h2>
-                                    <p className="text-alaz-orange text-[9px] font-black tracking-[0.2em] opacity-80 uppercase">ATEŞİ KÖRÜKLE!</p>
+                                    <h2 className="text-xl font-black text-white italic tracking-tight uppercase">Der Buchstabe</h2>
+                                    <p className="text-alaz-orange text-[9px] font-black tracking-[0.2em] opacity-80 uppercase">GIB ALLES!</p>
                                 </div>
                             </div>
 
@@ -277,7 +277,8 @@ export function PlayerGame() {
                                         </div>
                                         {(() => {
                                             const val = answers[category] || '';
-                                            const isWrongLetter = val.trim() !== '' && !val.trim().toLowerCase().startsWith(activeLetter.toLowerCase());
+                                            // Same rule as the host's scoring, so "Äpfel" is fine for A
+                                            const isWrongLetter = val.trim() !== '' && !normalizeAnswer(val).startsWith(normalizeAnswer(activeLetter));
                                             return (
                                                 <>
                                                     <input
@@ -298,7 +299,7 @@ export function PlayerGame() {
                                                             animate={{ opacity: 1, scale: 1 }}
                                                             className="absolute right-4 bottom-2 text-[8px] font-black text-red-500 uppercase tracking-widest"
                                                         >
-                                                            Yanlış Harf! "{activeLetter}" ile başlamalı
+                                                            Falscher Buchstabe! Muss mit „{activeLetter}“ beginnen
                                                         </motion.span>
                                                     )}
                                                 </>
@@ -322,7 +323,7 @@ export function PlayerGame() {
                                     }`}
                             >
                                 <NeonIcon type="rocket" color={anyCategoryFilled && !isLocked ? 'black' : 'gray'} className="w-5 h-5" />
-                                {isLocked ? (submitStatus === 'submitted' ? 'ATEŞLENDİ!' : 'BEKLENİYOR...') : !anyCategoryFilled ? 'EN AZ BİR CEVAP YAZ' : 'HIZ BONUSU AL! (ERKEN GÖNDER)'}
+                                {isLocked ? (submitStatus === 'submitted' ? 'ABGESCHICKT!' : 'BITTE WARTEN...') : !anyCategoryFilled ? 'GIB EINE ANTWORT EIN' : 'FRÜH ABGEBEN & BONUS'}
                             </button>
                         </motion.div>
                     )}
@@ -336,18 +337,18 @@ export function PlayerGame() {
                             </div>
                             <div className="space-y-4">
                                 <h2 className={`text-5xl font-black italic tracking-tighter uppercase ${roomStatus === 'finished' ? 'text-glow-blue text-neon-blue' : 'text-glow-alaz text-alaz-orange animate-glitch'}`}>
-                                    {roomStatus === 'finished' ? 'OYUN BİTTİ!' : 'TUR BİTTİ!'}
+                                    {roomStatus === 'finished' ? 'SPIEL VORBEI!' : 'RUNDE VORBEI!'}
                                 </h2>
                                 <div className="space-y-1">
                                     <p className="text-gray-400 text-sm font-medium">
-                                        {submitStatus === 'submitting' && 'Cevapların şehir merkezine taşınıyor...'}
-                                        {submitStatus === 'submitted' && 'Cevapların alındı! ✅ Puanlar TV ekranında.'}
-                                        {submitStatus === 'error' && 'Cevapların gönderilemedi ❌ Bağlantını kontrol et.'}
-                                        {submitStatus === 'idle' && (roomStatus === 'finished' ? 'Final tablosu hazır' : 'Sistem puanlamayı yapıyor...')}
+                                        {submitStatus === 'submitting' && 'Deine Antworten sind unterwegs...'}
+                                        {submitStatus === 'submitted' && 'Antworten angekommen! ✅ Die Punkte siehst du auf dem TV.'}
+                                        {submitStatus === 'error' && 'Antworten konnten nicht gesendet werden ❌ Prüfe deine Verbindung.'}
+                                        {submitStatus === 'idle' && (roomStatus === 'finished' ? 'Der Endstand ist da' : 'Punkte werden vergeben...')}
                                     </p>
                                     {roundPoints !== null && roundPoints > 0 && (
                                         <motion.div initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="text-2xl font-black text-green-400 tracking-widest uppercase">
-                                            BU TUR: +{roundPoints} PUAN
+                                            DIESE RUNDE: +{roundPoints} PUNKTE
                                         </motion.div>
                                     )}
                                 </div>
@@ -367,7 +368,7 @@ export function PlayerGame() {
                             {roomStatus === 'finished' && (
                                 <div className="mt-8">
                                     <button onClick={() => window.location.href = '/'} className="px-8 py-4 bg-white/10 border border-white/20 text-white font-bold rounded-2xl hover:bg-white/20 transition-all">
-                                        ANA SAYFAYA DÖN
+                                        ZUR STARTSEITE
                                     </button>
                                 </div>
                             )}

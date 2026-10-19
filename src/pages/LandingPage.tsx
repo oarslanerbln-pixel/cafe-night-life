@@ -81,7 +81,7 @@ export function LandingPage() {
                         className="bg-black fixed inset-0 z-[100] flex items-center justify-center overflow-hidden noise-suppression"
                     >
                         <div className="relative w-full max-w-7xl flex flex-col items-center justify-center">
-                            <KineticSpark delay={0.5} showTagline tagline="Kadim Ateş • Modern Ruh" />
+                            <KineticSpark delay={0.5} showTagline tagline="Uraltes Feuer • Moderner Geist" />
                             <motion.div
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: [0, 0.1, 0.05, 0.15] }}
@@ -111,9 +111,9 @@ export function LandingPage() {
                         className="group relative overflow-hidden p-8 rounded-3xl transition-all glass-panel-alaz hover:border-alaz-orange/50 cursor-pointer"
                     >
                         <div className="relative z-10 text-left">
-                            <span className="text-alaz-orange text-xs uppercase tracking-widest font-black block mb-2 opacity-70 group-hover:opacity-100 transition-opacity">Yayıncı / Kurucu</span>
-                            <h2 className="text-3xl font-black text-white mb-2 italic tracking-tight uppercase">Oda Kur</h2>
-                            <p className="text-gray-400 text-sm leading-relaxed">TV ekranında ateş yak, arkadaşlarını davet et!</p>
+                            <span className="text-alaz-orange text-xs uppercase tracking-widest font-black block mb-2 opacity-70 group-hover:opacity-100 transition-opacity">Gastgeber</span>
+                            <h2 className="text-3xl font-black text-white mb-2 italic tracking-tight uppercase">Raum erstellen</h2>
+                            <p className="text-gray-400 text-sm leading-relaxed">Entfache das Spiel auf dem TV und lade deine Freunde ein!</p>
                         </div>
                         <div className="absolute -inset-full bg-gradient-to-br from-alaz-orange/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-2xl" />
                     </TiltCard>
@@ -123,9 +123,9 @@ export function LandingPage() {
                         className="group relative overflow-hidden p-8 rounded-3xl transition-all glass-panel-neon-blue hover:border-neon-blue/50 cursor-pointer"
                     >
                         <div className="relative z-10 text-left">
-                            <span className="text-neon-blue text-xs uppercase tracking-widest font-black block mb-2 opacity-70 group-hover:opacity-100 transition-opacity">Oyuncu / Misafir</span>
-                            <h2 className="text-3xl font-black text-white mb-2 italic tracking-tight uppercase">Katıl</h2>
-                            <p className="text-gray-400 text-sm leading-relaxed">Telefonunla oyuna gir, zihninin ateşini göster!</p>
+                            <span className="text-neon-blue text-xs uppercase tracking-widest font-black block mb-2 opacity-70 group-hover:opacity-100 transition-opacity">Spieler / Gast</span>
+                            <h2 className="text-3xl font-black text-white mb-2 italic tracking-tight uppercase">Beitreten</h2>
+                            <p className="text-gray-400 text-sm leading-relaxed">Steig mit deinem Handy ein und zeig, was in dir steckt!</p>
                         </div>
                         <div className="absolute -inset-full bg-gradient-to-br from-neon-blue/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-2xl" />
                     </TiltCard>
@@ -133,7 +133,7 @@ export function LandingPage() {
                 </div>
 
                 <div className="mt-20">
-                    <p className="text-gray-500 text-sm uppercase tracking-widest font-medium">Ready for the ultimate mythical challenge?</p>
+                    <p className="text-gray-500 text-sm uppercase tracking-widest font-medium">Bereit für die ultimative Herausforderung?</p>
                 </div>
 
                     </motion.div>

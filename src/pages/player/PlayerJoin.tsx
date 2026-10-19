@@ -35,13 +35,13 @@ export function PlayerJoin() {
                 .single();
 
             if (roomError || !room) {
-                setErrorMsg('Oda bulunamadı. Lütfen TV ekranındaki kodu kontrol edin.');
+                setErrorMsg('Raum nicht gefunden. Bitte prüfe den Code auf dem TV-Bildschirm.');
                 setIsLoading(false);
                 return;
             }
 
             if (room.status !== 'lobby') {
-                setErrorMsg('Bu odaya şu an giriş yapılamaz (Oyun çoktan başlamış).');
+                setErrorMsg('Diesem Raum kann gerade niemand beitreten (das Spiel läuft bereits).');
                 setIsLoading(false);
                 return;
             }
@@ -59,7 +59,7 @@ export function PlayerJoin() {
                 .single();
 
             if (playerError) {
-                setErrorMsg('Oyuncu kaydı oluşturulamadı: ' + playerError.message);
+                setErrorMsg('Spieler konnte nicht angelegt werden: ' + playerError.message);
                 setIsLoading(false);
                 return;
             }
@@ -74,7 +74,7 @@ export function PlayerJoin() {
 
         } catch (err) {
             console.error(err);
-            setErrorMsg('Beklenmeyen bir hata oluştu.');
+            setErrorMsg('Ein unerwarteter Fehler ist aufgetreten.');
             setIsLoading(false);
         }
     };
@@ -92,7 +92,7 @@ export function PlayerJoin() {
                         className="bg-black fixed inset-0 z-[100] flex items-center justify-center overflow-hidden noise-suppression"
                     >
                         <div className="relative w-full max-w-7xl flex flex-col items-center justify-center">
-                            <KineticSpark delay={0.5} showTagline tagline="Kadim Ateş • Modern Ruh" />
+                            <KineticSpark delay={0.5} showTagline tagline="Uraltes Feuer • Moderner Geist" />
                             <motion.div
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: [0, 0.1, 0.05, 0.15] }}
@@ -109,11 +109,10 @@ export function PlayerJoin() {
                         transition={{ type: 'spring', stiffness: 200, damping: 20 }}
                         className="w-full max-w-md"
                     >
-                        {/* Brand Experience - ALAZ NEON (Mini version) */}
+                        {/* Brand Experience - HENGAME (Mini version) */}
                         <header className="mb-10 pointer-events-none opacity-80 scale-75">
                             <KineticSpark
-                                fontSizeAlaz="text-[8rem] md:text-[7rem]"
-                                fontSizeNeon="text-[7rem] md:text-[6rem]"
+                                fontSize="text-[8rem] md:text-[7rem]"
                                 showTagline
                                 delay={0.2}
                             />
@@ -134,7 +133,7 @@ export function PlayerJoin() {
                     )}
 
                     <div className="space-y-3 text-left">
-                        <label className="text-[10px] text-gray-500 font-black uppercase tracking-widest ml-1">Oda Kodu</label>
+                        <label className="text-[10px] text-gray-500 font-black uppercase tracking-widest ml-1">Raumcode</label>
                         <div className="relative">
                             <input
                                 type="text"
@@ -142,7 +141,7 @@ export function PlayerJoin() {
                                 maxLength={4}
                                 value={roomCode}
                                 onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
-                                placeholder="ÖRN: 4X9B"
+                                placeholder="Z. B. 4X9B"
                                 className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-5 text-center text-4xl tracking-[0.2em] uppercase font-black focus:outline-none focus:border-alaz-orange focus:ring-1 focus:ring-alaz-orange transition-all placeholder:opacity-20 text-white"
                             />
                             <div className="absolute inset-0 rounded-2xl pointer-events-none border border-alaz-orange/10 group-focus-within:border-alaz-orange/30 transition-colors" />
@@ -150,13 +149,13 @@ export function PlayerJoin() {
                     </div>
 
                     <div className="space-y-3 text-left">
-                        <label className="text-[10px] text-gray-500 font-black uppercase tracking-widest ml-1">Nickname / Team Name</label>
+                        <label className="text-[10px] text-gray-500 font-black uppercase tracking-widest ml-1">Spitzname / Teamname</label>
                         <input
                             type="text"
                             required
                             value={nickname}
                             onChange={(e) => setNickname(e.target.value)}
-                            placeholder="Efsane Takım"
+                            placeholder="Legendäres Team"
                             maxLength={20}
                             className="w-full bg-white/5 border border-white/10 rounded-2xl px-6 py-5 text-center text-2xl font-bold focus:outline-none focus:border-neon-blue focus:ring-1 focus:ring-neon-blue transition-all placeholder:opacity-20 text-white"
                         />
@@ -173,12 +172,12 @@ export function PlayerJoin() {
                             : 'bg-white text-black hover:bg-alaz-orange hover:text-white shadow-[0_0_30px_rgba(255,255,255,0.2)] hover:shadow-[0_0_40px_rgba(255,77,0,0.4)]'
                             }`}
                     >
-                        {isLoading ? 'BAĞLANILIYOR...' : 'SAVAŞA KATIL →'}
+                        {isLoading ? 'VERBINDE...' : 'INS GETÜMMEL →'}
                     </motion.button>
                 </form>
 
                 <div className="mt-12 opacity-30">
-                    <p className="text-[10px] text-gray-500 uppercase tracking-[0.3em] font-black">Powered by ALAZ NEON OS</p>
+                    <p className="text-[10px] text-gray-500 uppercase tracking-[0.3em] font-black">Powered by HENGAME</p>
                 </div>
                     </motion.div>
                 )}
