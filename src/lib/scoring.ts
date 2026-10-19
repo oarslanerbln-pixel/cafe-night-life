@@ -41,18 +41,19 @@ export type PlayerRound = {
 
 export const overrideKey = (playerId: string, category: string) => `${playerId}::${category}`;
 
-const TR_FOLD: Record<string, string> = { 'ç': 'c', 'ğ': 'g', 'ı': 'i', 'ö': 'o', 'ş': 's', 'ü': 'u' };
+// ß and the Turkish letters NFD can't decompose; umlauts and other accents are stripped below
+const FOLD: Record<string, string> = { 'ß': 'ss', 'ç': 'c', 'ğ': 'g', 'ı': 'i', 'ş': 's' };
 
 /**
- * Canonical form used to compare answers and check the starting letter: case, spacing and
- * Turkish diacritics don't matter ("İstanbul" == "istanbul " == "Istanbul"), because phone keyboards differ.
+ * Canonical form used to compare answers and check the starting letter: case, spacing, umlauts and
+ * accents don't matter ("Straße" == "strasse ", "Äpfel" counts for A), because phone keyboards differ.
  */
 export function normalizeAnswer(raw: string): string {
     return raw
         .trim()
         .replace(/\s+/g, ' ')
-        .toLocaleLowerCase('tr-TR')
-        .replace(/[çğıöşü]/g, ch => TR_FOLD[ch])
+        .toLocaleLowerCase('de-DE')
+        .replace(/[ßçğış]/g, ch => FOLD[ch])
         .normalize('NFD')
         .replace(/[̀-ͯ]/g, '');
 }
@@ -144,7 +145,7 @@ export type Rankable = { id: string; name: string; total: number; tiebreak: numb
  */
 export function rankStandings<T extends Rankable>(entries: T[]): (T & { rank: number })[] {
     const sorted = [...entries].sort((a, b) =>
-        b.total - a.total || b.tiebreak - a.tiebreak || a.name.localeCompare(b.name, 'tr'));
+        b.total - a.total || b.tiebreak - a.tiebreak || a.name.localeCompare(b.name, 'de'));
     return sorted.map((e, i) => {
         const firstTied = sorted.findIndex(x => x.total === e.total);
         return { ...e, rank: firstTied === i ? i + 1 : firstTied + 1 };

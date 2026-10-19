@@ -26,11 +26,11 @@ type Room = {
 type PlayerStats = { uniqueCount: number; earlyCount: number; blankCount: number };
 
 const ANSWER_STYLE: Record<AnswerStatus, { card: string; text: string; label: (pts: number) => string }> = {
-    unique: { card: 'border-green-500/50 bg-green-500/10 shadow-[0_0_15px_rgba(34,197,94,0.1)]', text: 'text-green-400', label: pts => `BENZERSİZ · +${pts}` },
-    shared: { card: 'border-white/20 bg-white/10', text: 'text-white', label: pts => `ORTAK · +${pts}` },
-    blank: { card: 'border-white/5 bg-white/[0.03]', text: 'text-gray-600', label: () => 'BOŞ' },
-    'wrong-letter': { card: 'border-red-500/40 bg-red-500/10', text: 'text-red-400', label: () => 'YANLIŞ HARF' },
-    rejected: { card: 'border-red-500/40 bg-red-500/10', text: 'text-red-400', label: () => 'HOST REDDETTİ' },
+    unique: { card: 'border-green-500/50 bg-green-500/10 shadow-[0_0_15px_rgba(34,197,94,0.1)]', text: 'text-green-400', label: pts => `EINZIGARTIG · +${pts}` },
+    shared: { card: 'border-white/20 bg-white/10', text: 'text-white', label: pts => `DOPPELT · +${pts}` },
+    blank: { card: 'border-white/5 bg-white/[0.03]', text: 'text-gray-600', label: () => 'LEER' },
+    'wrong-letter': { card: 'border-red-500/40 bg-red-500/10', text: 'text-red-400', label: () => 'FALSCHER BUCHSTABE' },
+    rejected: { card: 'border-red-500/40 bg-red-500/10', text: 'text-red-400', label: () => 'VOM HOST ABGELEHNT' },
 };
 
 export function HostDisplay() {
@@ -148,7 +148,7 @@ export function HostDisplay() {
             .map(a => ({ playerId: a.player_id as string, data: (a.data ?? {}) as Record<string, string> }))
             .filter(a => a.data._round === undefined || a.data._round === String(room.current_round));
 
-        if (submissions.length === 0) console.log("Cevap bulunamadı. Sorgu harfi:", letterToQuery);
+        if (submissions.length === 0) console.log("Keine Antworten gefunden. Buchstabe:", letterToQuery);
 
         setRoundLetter(letterToQuery);
         setRoundSubmissions(submissions);
@@ -226,7 +226,8 @@ export function HostDisplay() {
     const startGame = async () => {
         if (!roomId || !room) return;
 
-        const letters = "ABCDEFGHIJKLMNOPRSTUVYZ";
+        // Usual Stadt-Land-Fluss set: Q, X and Y are left out because hardly any words start with them
+        const letters = "ABCDEFGHIJKLMNOPRSTUVWZ";
         const randomLetter = letters[Math.floor(Math.random() * letters.length)];
         setCurrentLetter(randomLetter);
 
@@ -328,17 +329,17 @@ export function HostDisplay() {
 
             {gameState !== 'intro' && (
                 <header className="flex justify-between items-center mb-8 relative z-20 bg-black/40 p-4 rounded-3xl border border-white/10 backdrop-blur-md">
-                    <h1 className="text-3xl font-black text-glow-alaz tracking-widest animate-neon-flicker uppercase">ALAZ NEON</h1>
+                    <h1 className="text-3xl font-black text-glow-alaz tracking-widest animate-neon-flicker uppercase">HENGAME</h1>
                     {room && (gameState === 'playing' || gameState === 'review' || gameState === 'finished') && (
                         <div className="flex items-center gap-2 px-4 py-2 border border-alaz-orange/30 rounded-xl bg-alaz-orange/10">
                             <NeonIcon type="history" color="orange" className="w-5 h-5 animate-spin-slow" />
                             <span className="text-alaz-orange font-black text-lg tracking-widest">
-                                TUR {room.current_round} / {room.total_rounds}
+                                RUNDE {room.current_round} / {room.total_rounds}
                             </span>
                         </div>
                     )}
                     <div className="flex items-center gap-4">
-                        <span className="text-[10px] text-gray-500 uppercase tracking-widest font-black">Oda Kodu</span>
+                        <span className="text-[10px] text-gray-500 uppercase tracking-widest font-black">Raumcode</span>
                         <span className="text-2xl font-mono font-black text-white bg-white/10 px-4 py-1.5 rounded-lg border border-white/20">
                             {room?.code || '...'}
                         </span>
@@ -378,13 +379,13 @@ export function HostDisplay() {
                             <div className="md:col-span-3 glass-panel-alaz p-12 text-left relative overflow-hidden group">
                                 <div className="relative z-10 flex items-start gap-8">
                                     <div className="flex-1">
-                                        <h2 className="text-glow-alaz text-5xl font-black italic mb-6 animate-pulse">Oyun Başlıyor!</h2>
+                                        <h2 className="text-glow-alaz text-5xl font-black italic mb-6 animate-pulse">Gleich geht’s los!</h2>
                                         <p className="text-gray-400 text-xl max-w-md leading-relaxed">
-                                            Kelimelerin kadim ateşini uyandırın. Bu oyun <strong>{room?.total_rounds} tur</strong> sürecek.
+                                            Weckt das uralte Feuer der Wörter. Dieses Spiel dauert <strong>{room?.total_rounds} Runden</strong>.
                                         </p>
                                         <div className="mt-12 flex gap-12 items-end">
                                             <div>
-                                                <span className="text-gray-500 uppercase tracking-widest text-xs font-black block mb-2">ODA GİRİŞ KODU</span>
+                                                <span className="text-gray-500 uppercase tracking-widest text-xs font-black block mb-2">RAUMCODE</span>
                                                 <div className="text-9xl font-mono font-black text-white bg-white/5 px-10 py-5 rounded-3xl border-2 border-alaz-orange text-glow-alaz">
                                                     {room?.code || '...'}
                                                 </div>
@@ -399,7 +400,7 @@ export function HostDisplay() {
                                                         level="H"
                                                         marginSize={1}
                                                     />
-                                                    <span className="text-black text-[10px] font-black uppercase tracking-widest">Kameranı Okut</span>
+                                                    <span className="text-black text-[10px] font-black uppercase tracking-widest">Mit der Kamera scannen</span>
                                                 </div>
                                             )}
                                         </div>
@@ -412,10 +413,10 @@ export function HostDisplay() {
                             <div className="md:col-span-1 glass-panel-pulse-blue p-8 flex flex-col justify-center text-center group">
                                 <NeonIcon type="users" color="blue" className="mx-auto mb-4 animate-beat" />
                                 <h3 className="text-3xl font-black text-white group-hover:text-glow-blue transition-all">{players.length}</h3>
-                                <p className="text-gray-400 text-sm uppercase tracking-widest font-bold">Takımlar</p>
+                                <p className="text-gray-400 text-sm uppercase tracking-widest font-bold">Teams</p>
                                 <div className="mt-8 pt-8 border-t border-white/10">
                                     <button onClick={startGame} disabled={players.length < 1} className={`w-full py-4 rounded-2xl font-black transition-all ${players.length < 1 ? 'bg-gray-800 text-gray-500 cursor-not-allowed' : 'bg-white text-black hover:bg-alaz-orange hover:text-white shadow-[0_0_20px_rgba(255,77,0,0.3)] hover:scale-105'}`}>
-                                        OYUNU BAŞLAT
+                                        SPIEL STARTEN
                                     </button>
                                 </div>
                             </div>
@@ -452,7 +453,7 @@ export function HostDisplay() {
                                 <motion.div initial={{ x: 100, opacity: 0 }} animate={{ x: 0, opacity: 1 }} className="text-left">
                                     <div className="flex items-baseline gap-4">
                                         <span className={`text-[12rem] font-black leading-none tracking-tighter ${timeLeft <= 10 ? 'text-glow-ultra-alaz animate-pulse' : 'text-white'}`}>{timeLeft}</span>
-                                        <span className="text-2xl font-black text-gray-500 uppercase tracking-widest">Saniye</span>
+                                        <span className="text-2xl font-black text-gray-500 uppercase tracking-widest">Sekunden</span>
                                     </div>
                                 </motion.div>
                             </div>
@@ -460,7 +461,7 @@ export function HostDisplay() {
                                 <div className="grid grid-cols-5 gap-6">
                                     {(room?.categories || []).map((cat, idx) => (
                                         <motion.div key={cat} initial={{ y: 50, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: idx * 0.1 }} className="glass-panel-alaz p-6 text-center border-white/5">
-                                            <span className="text-[10px] text-gray-500 font-black uppercase tracking-[0.2em] mb-2 block">{idx + 1}. KATEGORİ</span>
+                                            <span className="text-[10px] text-gray-500 font-black uppercase tracking-[0.2em] mb-2 block">{idx + 1}. KATEGORIE</span>
                                             <p className="text-xl font-black text-white">{cat}</p>
                                         </motion.div>
                                     ))}
@@ -476,18 +477,18 @@ export function HostDisplay() {
                                 <div className="flex-1 flex flex-col items-center justify-center space-y-8 animate-pulse">
                                     <div className="w-32 h-32 rounded-full border-8 border-alaz-orange border-t-transparent animate-spin" />
                                     <div className="text-center">
-                                        <h2 className="text-4xl font-black text-white uppercase tracking-widest mb-2">PUANLAR ANALİZ EDİLİYOR</h2>
-                                        <p className="text-alaz-orange font-bold tracking-[0.3em] uppercase">Zihinlerin ateşi ölçülüyor...</p>
+                                        <h2 className="text-4xl font-black text-white uppercase tracking-widest mb-2">PUNKTE WERDEN AUSGEWERTET</h2>
+                                        <p className="text-alaz-orange font-bold tracking-[0.3em] uppercase">Das Feuer der Köpfe wird gemessen...</p>
                                     </div>
                                 </div>
                             ) : (
                                 <div className="w-full h-full min-h-0 flex flex-col">
                                     <div className="text-center mb-4">
                                         <h2 className="text-5xl font-black text-white uppercase tracking-[0.2em] text-glow-ultra-alaz animate-glitch mb-2">
-                                            TUR {room?.current_round} ÖZETİ
+                                            AUSWERTUNG RUNDE {room?.current_round}
                                         </h2>
                                         <p className="text-gray-500 text-xs uppercase font-black tracking-[0.25em]">
-                                            Benzersiz +{SCORING.unique} · Ortak +{SCORING.shared} · Hız bonusu +{SCORING.speedBonus} · Cevaba dokunarak onayla / reddet
+                                            Einzigartig +{SCORING.unique} · Doppelt +{SCORING.shared} · Tempobonus +{SCORING.speedBonus} · Antwort antippen zum Annehmen / Ablehnen
                                         </p>
                                     </div>
 
@@ -495,8 +496,8 @@ export function HostDisplay() {
                                         {/* Standings: everyone's total including this round */}
                                         <div className="w-5/12 glass-panel-alaz p-6 flex flex-col overflow-hidden">
                                             <div className="mb-4 flex items-baseline justify-between">
-                                                <h3 className="text-sm font-black text-gray-500 uppercase tracking-widest">Puan Durumu</h3>
-                                                <span className="text-[10px] font-black text-gray-600 uppercase tracking-widest">Bu tur dahil toplam</span>
+                                                <h3 className="text-sm font-black text-gray-500 uppercase tracking-widest">Punktestand</h3>
+                                                <span className="text-[10px] font-black text-gray-600 uppercase tracking-widest">Gesamt inkl. dieser Runde</span>
                                             </div>
                                             <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
                                                 <Leaderboard entries={reviewStandings} />
@@ -506,7 +507,7 @@ export function HostDisplay() {
                                         {/* Answers Breakdown */}
                                         <div className="w-7/12 glass-panel-alaz p-6 border-white/5 flex flex-col relative overflow-hidden">
                                             <div className="absolute top-0 right-0 w-64 h-64 bg-alaz-orange/5 blur-[100px] pointer-events-none" />
-                                            <h3 className="text-sm font-black text-gray-500 uppercase tracking-widest mb-6 relative z-10">Kategori Analizi</h3>
+                                            <h3 className="text-sm font-black text-gray-500 uppercase tracking-widest mb-6 relative z-10">Kategorien im Detail</h3>
                                             <div className="flex-1 overflow-y-auto space-y-8 pr-4 custom-scrollbar relative z-10">
                                                 {(room?.categories || []).map((cat, catIdx) => (
                                                     <div key={cat} className="space-y-3">
@@ -536,7 +537,7 @@ export function HostDisplay() {
                                                                         {!blank && (
                                                                             <div className="absolute inset-0 bg-black/60 opacity-0 group-hover/ans:opacity-100 group-focus-visible/ans:opacity-100 flex items-center justify-center transition-opacity z-10">
                                                                                 <span className={`text-[10px] font-black tracking-widest text-white uppercase px-3 py-1 rounded-full shadow-lg ${ans.valid ? 'bg-red-600' : 'bg-green-600'}`}>
-                                                                                    {ans.valid ? 'REDDET' : 'ONAYLA'}
+                                                                                    {ans.valid ? 'ABLEHNEN' : 'ANNEHMEN'}
                                                                                 </span>
                                                                             </div>
                                                                         )}
@@ -547,7 +548,7 @@ export function HostDisplay() {
                                                                         </div>
                                                                         <div className={`text-[10px] font-black uppercase flex items-center gap-1.5 ${style.text}`}>
                                                                             <div className="w-1.5 h-1.5 rounded-full bg-current" />
-                                                                            {style.label(ans.points)}{ans.overridden && ans.valid ? ' · HOST ONAYI' : ''}
+                                                                            {style.label(ans.points)}{ans.overridden && ans.valid ? ' · VOM HOST ANGENOMMEN' : ''}
                                                                         </div>
                                                                     </motion.div>
                                                                 );
@@ -561,9 +562,9 @@ export function HostDisplay() {
                                                     <div className="mt-6 p-4 rounded-2xl border border-neon-blue bg-neon-blue/10 flex items-center gap-4">
                                                         <NeonIcon type="rocket" color="blue" className="w-8 h-8 animate-beat" />
                                                         <div>
-                                                            <h4 className="text-neon-blue font-black tracking-widest uppercase">GÜMÜŞ FİŞEK YOLCUSU (HIZ BONUSU)</h4>
+                                                            <h4 className="text-neon-blue font-black tracking-widest uppercase">SILBERNE RAKETE (TEMPOBONUS)</h4>
                                                             <p className="text-white text-sm font-bold">
-                                                                {playerName(roundResults.find(r => r.speedBonus)!.playerId)} önce ateşledi! <span className="text-neon-blue">+{SCORING.speedBonus} PUAN</span>
+                                                                {playerName(roundResults.find(r => r.speedBonus)!.playerId)} war am schnellsten! <span className="text-neon-blue">+{SCORING.speedBonus} PUNKTE</span>
                                                             </p>
                                                         </div>
                                                     </div>
@@ -572,7 +573,7 @@ export function HostDisplay() {
 
                                             <div className="mt-8 relative z-10 flex justify-end">
                                                 <motion.button onClick={nextStep} whileHover={{ scale: 1.05 }} className="w-full py-5 bg-alaz-orange text-black font-black text-xl rounded-2xl shadow-[0_0_30px_rgba(255,77,0,0.3)] transition-all">
-                                                    {room!.current_round >= room!.total_rounds ? 'SONUÇLARI GÖR →' : 'SONRAKİ TURA GEÇ →'}
+                                                    {room!.current_round >= room!.total_rounds ? 'ERGEBNISSE ANZEIGEN →' : 'NÄCHSTE RUNDE →'}
                                                 </motion.button>
                                             </div>
                                         </div>
@@ -586,7 +587,7 @@ export function HostDisplay() {
                     {gameState === 'finished' && (
                         <motion.div key="finished" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="w-full h-full min-h-0 overflow-y-auto custom-scrollbar flex flex-col items-center gap-4 py-2">
                             <motion.h2 initial={{ y: -50, opacity: 0, scale: 0.8 }} animate={{ y: 0, opacity: 1, scale: 1 }} transition={{ delay: 0.2, type: 'spring' }} className="text-6xl font-black text-white uppercase tracking-[0.2em] text-glow-ultra-alaz">
-                                ŞAMPİYONLAR
+                                SIEGEREHRUNG
                             </motion.h2>
 
                             <div className="w-full max-w-7xl px-8 grid grid-cols-5 gap-10 items-end">
@@ -602,7 +603,7 @@ export function HostDisplay() {
                                             <div className="mb-3 w-full px-2 text-center">
                                                 {i === 1 && <NeonIcon type="crown" color="orange" className="w-12 h-12 mx-auto mb-1 animate-beat drop-shadow-[0_0_20px_rgba(255,77,0,1)]" />}
                                                 <div className={`truncate font-black ${name}`}>{entry.name}</div>
-                                                <div className={`font-black tabular-nums ${pts}`}>{entry.total} PTS</div>
+                                                <div className={`font-black tabular-nums ${pts}`}>{entry.total} PKT</div>
                                             </div>
                                             <motion.div
                                                 initial={{ height: 0 }}
@@ -618,14 +619,14 @@ export function HostDisplay() {
 
                                 {/* Full standings with per-round points */}
                                 <div className="col-span-2 glass-panel-alaz p-5">
-                                    <h3 className="mb-3 text-sm font-black text-gray-500 uppercase tracking-widest">Final Tablosu</h3>
+                                    <h3 className="mb-3 text-sm font-black text-gray-500 uppercase tracking-widest">Endstand</h3>
                                     <Leaderboard entries={finalStandings} variant="final" />
                                 </div>
                             </div>
 
                             {/* OYUNUN ENLERI (AWARDS) */}
                             <motion.div initial={{ opacity: 0, y: 50 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 2.5, duration: 1 }} className="w-full max-w-5xl">
-                                <h3 className="text-center text-sm font-black text-gray-500 uppercase tracking-widest mb-3">OYUNUN EN'LERİ</h3>
+                                <h3 className="text-center text-sm font-black text-gray-500 uppercase tracking-widest mb-3">AUSZEICHNUNGEN</h3>
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                     {(() => {
                                         const getWinner = (key: 'uniqueCount' | 'earlyCount' | 'blankCount') => {
@@ -643,55 +644,55 @@ export function HostDisplay() {
 
                                         return (
                                             <>
-                                                {/* Mitik Yaratıcı */}
+                                                {/* Mythischer Schöpfer */}
                                                 <div className="glass-panel-alaz p-4 flex flex-col items-center justify-center text-center border-alaz-orange/30 group hover:border-alaz-orange transition-all">
                                                     <div className="w-16 h-16 rounded-full bg-alaz-orange/20 flex items-center justify-center mb-2 group-hover:scale-110 transition-transform shadow-[0_0_20px_rgba(255,77,0,0.3)]">
                                                         <NeonIcon type="lightbulb" color="orange" className="w-8 h-8" />
                                                     </div>
-                                                    <h4 className="text-alaz-orange font-black text-lg uppercase tracking-tight mb-1">MİTİK YARATICI</h4>
-                                                    <p className="text-gray-400 text-xs font-bold uppercase tracking-widest mb-2">En Yenilikçi Karakter</p>
+                                                    <h4 className="text-alaz-orange font-black text-lg uppercase tracking-tight mb-1">MYTHISCHER SCHÖPFER</h4>
+                                                    <p className="text-gray-400 text-xs font-bold uppercase tracking-widest mb-2">Der kreativste Kopf</p>
 
                                                     {uniqueW ? (
                                                         <>
                                                             <div className="text-2xl font-black text-white truncate w-full px-2 mx-auto">{uniqueW.name}</div>
-                                                            <div className="text-alaz-orange font-bold text-sm mt-1">{uniqueW.count} Benzersiz Cevap</div>
+                                                            <div className="text-alaz-orange font-bold text-sm mt-1">{uniqueW.count} einzigartige Antworten</div>
                                                         </>
                                                     ) : (
-                                                        <div className="text-gray-600 font-bold italic">Herkes kopyacıydı!</div>
+                                                        <div className="text-gray-600 font-bold italic">Alle haben abgeschrieben!</div>
                                                     )}
                                                 </div>
 
-                                                {/* Ateşin Oğlu */}
+                                                {/* Sohn des Feuers */}
                                                 <div className="glass-panel-pulse-blue p-4 flex flex-col items-center justify-center text-center border-neon-blue/30 group hover:border-neon-blue transition-all">
                                                     <div className="w-16 h-16 rounded-full bg-neon-blue/20 flex items-center justify-center mb-2 group-hover:scale-110 transition-transform shadow-[0_0_20px_rgba(0,255,255,0.3)]">
                                                         <NeonIcon type="rocket" color="blue" className="w-8 h-8" />
                                                     </div>
-                                                    <h4 className="text-neon-blue font-black text-lg uppercase tracking-tight mb-1">ATEŞİN OĞLU</h4>
-                                                    <p className="text-gray-400 text-xs font-bold uppercase tracking-widest mb-2">Fırtına Gemi Kaptanı</p>
+                                                    <h4 className="text-neon-blue font-black text-lg uppercase tracking-tight mb-1">SOHN DES FEUERS</h4>
+                                                    <p className="text-gray-400 text-xs font-bold uppercase tracking-widest mb-2">Kapitän des Sturmschiffs</p>
 
                                                     {earlyW ? (
                                                         <>
                                                             <div className="text-2xl font-black text-white truncate w-full px-2 mx-auto">{earlyW.name}</div>
-                                                            <div className="text-neon-blue font-bold text-sm mt-1">{earlyW.count} Hız Bonusu</div>
+                                                            <div className="text-neon-blue font-bold text-sm mt-1">{earlyW.count}× Tempobonus</div>
                                                         </>
                                                     ) : (
-                                                        <div className="text-gray-600 font-bold italic">Kimse acele etmedi.</div>
+                                                        <div className="text-gray-600 font-bold italic">Niemand hatte es eilig.</div>
                                                     )}
                                                 </div>
 
-                                                {/* Hayalet */}
+                                                {/* Lobby-Gespenst */}
                                                 <div className="bg-white/5 border border-white/10 rounded-3xl p-4 flex flex-col items-center justify-center text-center group hover:bg-white/10 transition-all">
                                                     <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mb-2 group-hover:scale-110 transition-transform text-3xl">👻</div>
-                                                    <h4 className="text-gray-300 font-black text-lg uppercase tracking-tight mb-1">LOBİ HAYALETİ</h4>
-                                                    <p className="text-gray-500 text-xs font-bold uppercase tracking-widest mb-2">Boş Kağıt Uzmanı</p>
+                                                    <h4 className="text-gray-300 font-black text-lg uppercase tracking-tight mb-1">LOBBY-GESPENST</h4>
+                                                    <p className="text-gray-500 text-xs font-bold uppercase tracking-widest mb-2">Experte für leere Zettel</p>
 
                                                     {blankW ? (
                                                         <>
                                                             <div className="text-2xl font-black text-gray-300 truncate w-full px-2 mx-auto">{blankW.name}</div>
-                                                            <div className="text-gray-500 font-bold text-sm mt-1">{blankW.count} Boş Cevap</div>
+                                                            <div className="text-gray-500 font-bold text-sm mt-1">{blankW.count} leere Antworten</div>
                                                         </>
                                                     ) : (
-                                                        <div className="text-green-500/50 font-bold italic">Kağıtlar ful dolu!</div>
+                                                        <div className="text-green-500/50 font-bold italic">Alle Zettel voll!</div>
                                                     )}
                                                 </div>
                                             </>
@@ -707,7 +708,7 @@ export function HostDisplay() {
                                 transition={{ delay: 4 }}
                                 className="px-12 py-4 border-2 border-white/20 hover:border-white/50 text-white font-black rounded-2xl transition-all uppercase tracking-widest hover:bg-white/5 relative z-20 mb-6"
                             >
-                                Yeni Oyun Başlat
+                                Neues Spiel starten
                             </motion.button>
                         </motion.div>
                     )}

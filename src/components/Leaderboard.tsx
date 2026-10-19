@@ -44,14 +44,14 @@ export function Leaderboard({ entries, variant = 'review' }: Props) {
             {roundCount > 0 && (
                 <div className="flex items-center gap-3 px-4 pb-2 text-[10px] font-black uppercase tracking-widest text-gray-500">
                     <span className="w-10" />
-                    <span className="flex-1">Oyuncu</span>
+                    <span className="flex-1">Spieler</span>
                     {Array.from({ length: roundCount }, (_, i) => (
-                        <span key={i} className="w-9 text-center">T{i + 1}</span>
+                        <span key={i} className="w-9 text-center">R{i + 1}</span>
                     ))}
-                    <span className="w-16 text-right">Toplam</span>
+                    <span className="w-16 text-right">Gesamt</span>
                 </div>
             )}
-            <ol aria-label="Puan tablosu" className={`flex flex-col ${compact ? 'gap-1.5' : 'gap-2'}`}>
+            <ol aria-label="Punktetabelle" className={`flex flex-col ${compact ? 'gap-1.5' : 'gap-2'}`}>
                 {entries.map(e => {
                     const leader = e.rank === 1;
                     return (
